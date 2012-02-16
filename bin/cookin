@@ -1,15 +1,23 @@
 #!/usr/bin/env ruby
 
 require 'cool.io'
+require 'cool.io-http'
 require 'yajl'
+require 'base64'
+require "uri"
+
+API_URI = URI.parse('https://stream.twitter.com/1/statuses/sample.json')
 
 class TwitterClient < Cool.io::HttpClient
   def self.connect
-    super 'stream.twitter.com', 80
+    conn = super API_URI.host, API_URI.port
+    conn.extend(Coolio::SSL)
+    conn
   end
 
   def request
-    super 'GET', '/1/statuses/sample.json', :head=>{ 'Authorization'=>"Basic #{ENV['B64_TWITTER_CREDS']}", 'Accept'=>'*/*', 'Connection'=>'keep-alive'}
+    auth = Base64.encode64(ENV['TWITTER_USER'] + ':' + ENV['TWITTER_PASS'])
+    super 'GET', API_URI.path, :head=>{ 'Authorization'=>"Basic #{auth}", 'Accept'=>'*/*', 'Connection'=>'keep-alive'}
   end
 
   def on_response_header(header)
@@ -40,6 +48,11 @@ class TwitterClient < Cool.io::HttpClient
 
   def on_tweet(tweet)
     $stdout.puts "#{tweet[:user][:name]} (#{tweet[:user][:screen_name]}): #{tweet[:text]}"
+  end
+
+  def on_connect
+    ssl_client_start if respond_to?(:ssl_socket)
+    super
   end
 end
 
