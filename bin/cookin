@@ -27,7 +27,12 @@ class TwitterClient < Cool.io::HttpClient
   end
 
   def on_body_data(data)
-    @yajl << data
+    begin
+      @yajl << data
+    rescue Yajl::ParseError => e
+      puts "ParseError: #{ e.message }"
+      puts data
+    end
   end
 
   def on_request_complete
